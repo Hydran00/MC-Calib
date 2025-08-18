@@ -23,13 +23,13 @@ distortion_per_camera : [] #specify the model per camera,
 #leave "distortion_per_camera" empty [] if they all follow the same model (make sure that the vector is as long as cameras nb)
 number_camera: 2  # number of cameras in the rig to calibrate
 refine_corner: 1  # activate or deactivate the corner refinement
-min_perc_pts: 0.2  # min percentage of points visible to assume a good detection
+min_perc_pts: 0.4  # min percentage of points visible to assume a good detection
 
 cam_params_path: "../configs/Real_images/intrinsics/two_cams.yml" # "../../Images_Plan/calibrated_cameras_data.yml"  # file with cameras intrinsics to initialize the intrinsic, write "None" if no initialization available 
 fix_intrinsic: 1 #if 1 then the intrinsic parameters will not be estimated nor refined (initial value needed)
 
 ######################################## Images Parameters ###################################################
-root_path: "../configs/Real_images/dataset/" #"../../Images_Sim1Cam3Board/" # "../../Images_NonOver3/"  "../../Images_Cube/" "../../Images_Plan/" "../../Images_NonOver6Cam/"
+root_path: "../record_dataset/" #"../../Images_Sim1Cam3Board/" # "../../Images_NonOver3/"  "../../Images_Cube/" "../../Images_Plan/" "../../Images_NonOver6Cam/"
 cam_prefix: "Cam_"
 keypoints_path: "../configs/Real_images/dataset/detected_keypoints_data.yml" 
 
