@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
     init_params.camera_resolution = RESOLUTION::HD2K;
     init_params.coordinate_system = COORDINATE_SYSTEM::IMAGE;
     init_params.coordinate_units = UNIT::METER;
-    init_params.depth_mode = DEPTH_MODE::ULTRA;
+    init_params.depth_mode = DEPTH_MODE::NEURAL_PLUS;
     init_params.depth_maximum_distance = 3.0f;
 
     if (zed1.open(init_params) != ERROR_CODE::SUCCESS ||

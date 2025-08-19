@@ -25,7 +25,7 @@ number_camera: 2  # number of cameras in the rig to calibrate
 refine_corner: 1  # activate or deactivate the corner refinement
 min_perc_pts: 0.4  # min percentage of points visible to assume a good detection
 
-cam_params_path: "../configs/Real_images/intrinsics/two_cams.yml" # "../../Images_Plan/calibrated_cameras_data.yml"  # file with cameras intrinsics to initialize the intrinsic, write "None" if no initialization available 
+cam_params_path: "../configs/Real_images/intrinsics/new_zed2.yml" # "../../Images_Plan/calibrated_cameras_data.yml"  # file with cameras intrinsics to initialize the intrinsic, write "None" if no initialization available 
 fix_intrinsic: 1 #if 1 then the intrinsic parameters will not be estimated nor refined (initial value needed)
 
 ######################################## Images Parameters ###################################################

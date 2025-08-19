@@ -13,7 +13,7 @@ image_counters = []  # one counter per camera
 image_counter = 0
 
 capture_lock = threading.Lock()
-CAPTURE_PER_STATION = 10   # number of images to acquire per camera per click
+CAPTURE_PER_STATION = 1   # number of images to acquire per camera per click
 
 
 # ---------------- UTILS -----------------

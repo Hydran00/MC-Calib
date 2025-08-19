@@ -23,6 +23,9 @@ link_directories(${OpenCV_LIBRARY_DIRS})
 link_directories(${CUDA_LIBRARY_DIRS})
 
 add_executable(pc_viewer src/viewer.cpp)
+add_executable(refine_calibration src/refine_calibration.cpp)
 
 target_link_libraries(pc_viewer ${ZED_LIBRARIES} ${CUDA_CUDA_LIBRARY} ${CUDA_CUDART_LIBRARY}
+                      ${Open3D_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(refine_calibration ${ZED_LIBRARIES} ${CUDA_CUDA_LIBRARY} ${CUDA_CUDART_LIBRARY}
                       ${Open3D_LIBRARIES} ${OpenCV_LIBRARIES})
