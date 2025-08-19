@@ -4,14 +4,16 @@ import time
 import os
 import cv2
 import pyzed.sl as sl
-
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QLabel
 
 # Global variables
 exit_app = False
 capture_image = []  # one flag per camera
+image_counters = []  # one counter per camera
 image_counter = 0
+
 capture_lock = threading.Lock()
+CAPTURE_PER_STATION = 10   # number of images to acquire per camera per click
 
 
 # ---------------- UTILS -----------------
@@ -23,34 +25,33 @@ def create_camera_folders(nb_cameras):
             os.makedirs(folder_name)
 
 
-def save_image(image, camera_index, counter):
+def save_image(image, camera_index):
+    global image_counters
     folder_name = f"Cam_{(camera_index+1):03d}"
+    counter = image_counters[camera_index]
     filename = f"image_{counter:04d}.png"
     filepath = os.path.join(folder_name, filename)
     image_cv = image.get_data()
     cv2.imwrite(filepath, image_cv)
     print(f"Saved: {filepath}")
-
+    image_counters[camera_index] += 1
 
 def acquisition(zed, camera_index):
-    global capture_image, image_counter, capture_lock, exit_app
+    global capture_image, exit_app
 
     infos = zed.get_camera_information()
     image = sl.Mat()
 
     while not exit_app:
         if zed.grab() == sl.ERROR_CODE.SUCCESS:
-            with capture_lock:
-                if capture_image[camera_index]:
-                    zed.retrieve_image(image, sl.VIEW.LEFT)
-                    save_image(image, camera_index, image_counter)
-                    capture_image[camera_index] = False
-
+            if capture_image[camera_index] > 0:
+                zed.retrieve_image(image, sl.VIEW.LEFT)
+                save_image(image, camera_index)
+                capture_image[camera_index] -= 1
         time.sleep(0.01)
 
     print(f"{infos.camera_model}[{infos.serial_number}] QUIT")
     zed.close()
-
 
 def open_camera(zed, sn, camera_fps=30):
     init_params = sl.InitParameters()
@@ -89,17 +90,15 @@ class AcquireGui(QWidget):
         self.setLayout(layout)
 
     def acquire_images(self):
-        global capture_image, image_counter, capture_lock
-        with capture_lock:
-            image_counter += 1
-            print(f"--- Capturing image set #{image_counter} ---")
-            for i in range(len(self.zeds)):
-                capture_image[i] = True
+        global capture_image
+        print(f"--- Capturing {CAPTURE_PER_STATION} images per camera ---")
+        for i in range(len(self.zeds)):
+            capture_image[i] = CAPTURE_PER_STATION
 
 
 # ---------------- MAIN -----------------
 def main():
-    global exit_app, capture_image
+    global exit_app, capture_image, image_counters
 
     dev_list = sl.Camera.get_device_list()
     nb_cameras = len(dev_list)
@@ -119,9 +118,10 @@ def main():
         print("No ZED opened, exit program")
         return 1
 
-    # Init capture flags
-    capture_image = [False] * len(zeds)
-
+    # Init capture counters
+# Init capture flags and counters
+    capture_image = [0] * len(zeds)
+    image_counters = [1] * len(zeds)  # start from 1 for each camera
     # Start acquisition threads
     threads = []
     for i, zed in enumerate(zeds):
@@ -133,16 +133,22 @@ def main():
     app = QApplication(sys.argv)
     gui = AcquireGui(zeds)
     gui.show()
-    app.exec_()
 
-    # Exit
-    exit_app = True
-    for t in threads:
-        t.join()
+    try:
+        app.exec_()
+    except KeyboardInterrupt:
+        print("\nCtrl+C detected, terminating...")
+    finally:
+        # Signal threads to exit
+        exit_app = True
+        for t in threads:
+            t.join()
+        # Close all cameras
+        for zed in zeds:
+            zed.close()
 
-    print("Program exited")
+    print("Program exited cleanly")
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

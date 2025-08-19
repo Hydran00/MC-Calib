@@ -570,7 +570,7 @@ void Calibration::displayBoards(const cv::Mat &image, const int cam_idx,
           for (const auto &current_pt : current_pts) {
             LOG_DEBUG << "Pts x :: " << current_pt.x
                       << "   y :: " << current_pt.y;
-            cv::circle(image, cv::Point(current_pt.x, current_pt.y), 4,
+            cv::circle(image, cv::Point(current_pt.x, current_pt.y), 2,
                        cv::Scalar(color_temp[0], color_temp[1], color_temp[2]),
                        cv::FILLED, 8, 0);
           }
@@ -1962,11 +1962,11 @@ void Calibration::saveReprojectionImages(const int cam_id) {
             std::vector<double> color_detect{0, 255, 0};
             for (std::size_t i = 0; i < pts_2d.size(); i++) {
               cv::circle(
-                  image, cv::Point(pts_repro[i].x, pts_repro[i].y), 4,
+                  image, cv::Point(pts_repro[i].x, pts_repro[i].y), 2,
                   cv::Scalar(color_repro[0], color_repro[1], color_repro[2]),
                   cv::FILLED, 8, 0);
               cv::circle(
-                  image, cv::Point(pts_2d[i].x, pts_2d[i].y), 4,
+                  image, cv::Point(pts_2d[i].x, pts_2d[i].y), 2,
                   cv::Scalar(color_detect[0], color_detect[1], color_detect[2]),
                   cv::FILLED, 8, 0);
             }
@@ -2045,7 +2045,7 @@ void Calibration::saveDetectionImages(const int cam_id) {
             // plot the keypoints on the image (red project // green detected)
             std::array<int, 3> &color = it_obj_obs_object_3d_ptr->color_;
             for (const auto &pt_2d : pts_2d) {
-              cv::circle(image, cv::Point(pt_2d.x, pt_2d.y), 4,
+              cv::circle(image, cv::Point(pt_2d.x, pt_2d.y), 2,
                          cv::Scalar(color[0], color[1], color[2]), cv::FILLED,
                          8, 0);
             }

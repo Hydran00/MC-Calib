@@ -1,16 +1,16 @@
 %YAML:1.0
 
 ######################################## Boards Parameters ###################################################
-number_x_square: 9  #number of squares in the X direction
-number_y_square: 10  #number of squares the Y direction
-resolution_x: 2000 # horizontal resolution in pixel
-resolution_y: 2000  # vertical resolution in pixel
+number_x_square: 5  #number of squares in the X direction
+number_y_square: 7  #number of squares the Y direction
+resolution_x: 3000 # horizontal resolution in pixel
+resolution_y: 4200  # vertical resolution in pixel
 length_square: 0.04  # parameters on the marker (can be kept as it is)
 length_marker: 0.03  # parameters on the marker (can be kept as it is)
 number_board: 1 # number of boards used for calibration (for overlapping camera 1 is enough ...)
 boards_index: [] #leave it empty [] if the board index are ranging from zero to number_board
 # example of usage boards_index: [5,10] <-- only two board with index 5/10
-square_size: 0.028  # size of each square of the board in cm/mm/whatever you want
+square_size: 0.0564  # size of each square of the board in cm/mm/whatever you want
 
 ############# Boards Parameters for different board size (leave empty if all boards have the same size) #################
 number_x_square_per_board: []
