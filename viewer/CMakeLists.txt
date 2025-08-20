@@ -14,18 +14,18 @@ find_package(OpenCV REQUIRED)
 find_package(Open3D REQUIRED)
 find_package(CUDA ${ZED_CUDA_VERSION} REQUIRED)
 
-include_directories(${CUDA_INCLUDE_DIRS})
-include_directories(${ZED_INCLUDE_DIRS})
-include_directories(${OpenCV_INCLUDE_DIRS})
 
-link_directories(${ZED_LIBRARY_DIR})
-link_directories(${OpenCV_LIBRARY_DIRS})
-link_directories(${CUDA_LIBRARY_DIRS})
+
+
+
+add_library(yolov8 src/yolov8/yolov8_seg.cpp src/yolov8/yolov8_utils.cpp)
+target_include_directories(yolov8 PUBLIC include/yolov8 ${CUDA_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(yolov8 ${CUDA_CUDA_LIBRARY} ${CUDA_CUDART_LIBRARY}
+                      ${OpenCV_LIBRARIES} ${Open3D_LIBRARIES})
+
 
 add_executable(pc_viewer src/viewer.cpp)
-add_executable(refine_calibration src/refine_calibration.cpp)
-
+target_include_directories(pc_viewer PUBLIC include ${ZED_INCLUDE_DIRS} ${Open3D_INCLUDE_DIRS}
+                           ${OpenCV_INCLUDE_DIRS})
 target_link_libraries(pc_viewer ${ZED_LIBRARIES} ${CUDA_CUDA_LIBRARY} ${CUDA_CUDART_LIBRARY}
-                      ${Open3D_LIBRARIES} ${OpenCV_LIBRARIES})
-target_link_libraries(refine_calibration ${ZED_LIBRARIES} ${CUDA_CUDA_LIBRARY} ${CUDA_CUDART_LIBRARY}
-                      ${Open3D_LIBRARIES} ${OpenCV_LIBRARIES})
+                      ${Open3D_LIBRARIES} ${OpenCV_LIBRARIES} yolov8)
