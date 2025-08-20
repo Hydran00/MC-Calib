@@ -1,6 +1,6 @@
 import numpy as np
 import open3d as o3d
-
+import copy
 def preprocess_point_cloud(pcd, voxel_size):
     pcd_down = pcd.voxel_down_sample(voxel_size)
 
@@ -34,7 +34,7 @@ def perform_icp(source, target, threshold=0.02):
     result = o3d.pipelines.registration.registration_icp(
         source,
         target,
-        0.05,
+        0.1,
         np.eye(4),
         estimation,
     )
@@ -44,23 +44,45 @@ def perform_icp(source, target, threshold=0.02):
 # Example usage
 if __name__ == "__main__":
     # Load two point clouds
-    source = o3d.io.read_point_cloud("./build/pc1.ply")
-    target = o3d.io.read_point_cloud("./build/pc2.ply")
+    pc0 = o3d.io.read_point_cloud("./build/pc0.ply")
+    # statistical outlier removal
+    cl, ind = pc0.remove_statistical_outlier(nb_neighbors=20, std_ratio=2.0)
+    pc0 = pc0.select_by_index(ind)
+    pc1 = o3d.io.read_point_cloud("./build/pc1.ply")
+    # statistical outlier removal
+    cl, ind = pc1.remove_statistical_outlier(nb_neighbors=20, std_ratio=2.0)
+    pc1 = pc1.select_by_index(ind)
+    pc2 = o3d.io.read_point_cloud("./build/pc2.ply")
+    # statistical outlier removal
+    cl, ind = pc2.remove_statistical_outlier(nb_neighbors=20, std_ratio=2.0)
+    pc2 = pc2.select_by_index(ind)
 
-    o3d.visualization.draw_geometries([source, target], window_name="Source and Target Point Clouds")
+    vis = o3d.visualization.VisualizerWithEditing()
+    vis.create_window(window_name="Filtered Point Clouds")
+    tmp = copy.deepcopy(pc0)
+    tmp+= pc1
+    tmp+= pc2
+    vis.add_geometry(tmp)
+    vis.run()
+    vis.destroy_window()
+    print("")
+    print(vis.get_picked_points()) #[84, 119, 69]
     # Preprocess point clouds
     voxel_size = 0.01  # Adjust voxel size as needed
-    source_down, _ = preprocess_point_cloud(source, voxel_size)
-    target_down, _ = preprocess_point_cloud(target, voxel_size)
+    pc0_down, _ = preprocess_point_cloud(pc0, voxel_size)
+    pc1_down, _ = preprocess_point_cloud(pc1, voxel_size)
+    pc2_down, _ = preprocess_point_cloud(pc2, voxel_size)
     # Perform ICP
-    transformation = perform_icp(source_down, target_down)
+    transformation1 = perform_icp(pc1_down, pc0_down)
+    transformation2 = perform_icp(pc2_down, pc0_down)
 
-    # Print the transformation matrix
-    print("Transformation Matrix:")
-    print(transformation)
+
 
     # Optionally visualize the result
-    source.transform(transformation)
-    o3d.visualization.draw_geometries([source, target])
+    pc1.transform(transformation1)
+    pc2.transform(transformation2)
     # store the transformed source point cloud
-    o3d.io.write_point_cloud("./build/transformed_source.ply", source)
+    pc0 += pc1
+    pc0 += pc2
+    o3d.visualization.draw_geometries([pc0], window_name="Point Clouds")
+    o3d.io.write_point_cloud("./build/transformed_source.ply", pc0, write_ascii=True)

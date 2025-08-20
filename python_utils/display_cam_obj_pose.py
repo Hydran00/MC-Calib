@@ -19,6 +19,7 @@ def display_cam_obj_pose(calib_data: Path) -> None:
     ax = fig.add_subplot(projection="3d")
     ax.set_title("Calibration Result")
     for i in range(num_cameras):
+        print(f"Processing camera {i}")
         cam_id = "camera_" + str(i)
         cam_pose = fs.getNode(cam_id).getNode("camera_pose_matrix").mat()
         cam_trans = np.asarray([cam_pose[0:3, 3]]).T

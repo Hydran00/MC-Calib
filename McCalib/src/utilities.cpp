@@ -58,7 +58,7 @@ createCharucoBoardsImages(const unsigned int num_board,
                           const std::vector<int> &resolution_x_per_board,
                           const std::vector<int> &resolution_y_per_board) {
   cv::Ptr<cv::aruco::Dictionary> dict =
-      cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_1000);
+      cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
   const std::map<int, cv::Ptr<cv::aruco::CharucoBoard>> charuco_boards =
       createCharucoBoards(num_board, number_x_square_per_board,
                           number_y_square_per_board, length_square,
@@ -119,7 +119,7 @@ createCharucoBoardsImages(const unsigned int num_board,
                           const std::vector<int> &resolution_x_per_board,
                           const std::vector<int> &resolution_y_per_board) {
   const cv::aruco::Dictionary dict =
-      cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_1000);
+      cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
   const std::map<int, cv::Ptr<cv::aruco::CharucoBoard>> charuco_boards =
       createCharucoBoards(num_board, number_x_square_per_board,
                           number_y_square_per_board, length_square,

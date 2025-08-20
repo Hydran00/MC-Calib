@@ -8,36 +8,38 @@
 #include <sl/Camera.hpp>
 #include <thread>
 #include <mutex>
+#include <vector>
 
 using namespace sl;
 using namespace open3d;
 using namespace std;
 
-// Load relative transformation from YAML calibration file
-Eigen::Matrix4d LoadCalibrationYAML(const std::string &filename) {
+// Load relative transformations from YAML calibration file for n cameras
+vector<Eigen::Matrix4d> LoadCalibrationYAML(const string &filename, int n) {
+    vector<Eigen::Matrix4d> Ts(n, Eigen::Matrix4d::Identity());
     cv::FileStorage fs(filename, cv::FileStorage::READ);
     if (!fs.isOpened()) {
         cerr << "Failed to open YAML file: " << filename << endl;
-        return Eigen::Matrix4d::Identity();
+        return Ts;
     }
 
-    cv::Mat pose0, pose1;
-    fs["camera_0"]["camera_pose_matrix"] >> pose0;
-    fs["camera_1"]["camera_pose_matrix"] >> pose1;
+    cv::Mat pose;
+    for (int i = 0; i < n; i++) {
+        string cam_key = "camera_" + to_string(i);
+        fs[cam_key]["camera_pose_matrix"] >> pose;
+        Eigen::Matrix4d eigen_pose;
+        cv::cv2eigen(pose, eigen_pose);
+        Ts[i] = eigen_pose;
+    }
+
     fs.release();
-
-    Eigen::Matrix4d eigen_pose0, eigen_pose1;
-    cv::cv2eigen(pose0, eigen_pose0);
-    cv::cv2eigen(pose1, eigen_pose1);
-
-    return eigen_pose0.inverse() * eigen_pose1;
+    return Ts;
 }
 
-// Convert ZED XYZRGBA to Open3D PointCloud
-std::shared_ptr<geometry::PointCloud> ZEDToOpen3D(Mat &mat) {
+// Convert ZED XYZRGBA to Open3D PointCloud (same as before)
+shared_ptr<geometry::PointCloud> ZEDToOpen3D(Mat &mat) {
     int width = mat.getWidth();
     int height = mat.getHeight();
-
     auto cloud = make_shared<geometry::PointCloud>();
     cloud->points_.reserve(width * height);
     cloud->colors_.reserve(width * height);
@@ -58,7 +60,7 @@ std::shared_ptr<geometry::PointCloud> ZEDToOpen3D(Mat &mat) {
             float z = ptr[i * 4 + 2];
             float rgba_f = ptr[i * 4 + 3];
 
-            if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z))
+            if (!isfinite(x) || !isfinite(y) || !isfinite(z))
                 continue;
 
             points_private.emplace_back(x, y, z);
@@ -83,79 +85,81 @@ std::shared_ptr<geometry::PointCloud> ZEDToOpen3D(Mat &mat) {
 }
 
 int main(int argc, char **argv) {
-    std::string calib_file = (argc > 1) ? argv[1] : "calibration.yaml";
+    string calib_file = (argc > 1) ? argv[1] : "calibration.yaml";
+    int n_cameras = (argc > 2) ? stoi(argv[2]) : 2; // number of cameras
     cout << "Loading calibration from: " << calib_file << endl;
-    Eigen::Matrix4d T = LoadCalibrationYAML(calib_file);
+    auto Ts = LoadCalibrationYAML(calib_file, n_cameras);
 
-    Camera zed1, zed2;
+    vector<Camera> zeds(n_cameras);
+    vector<Mat> pc_mats(n_cameras);
     InitParameters init_params;
     init_params.camera_resolution = RESOLUTION::HD2K;
     init_params.coordinate_system = COORDINATE_SYSTEM::IMAGE;
     init_params.coordinate_units = UNIT::METER;
     init_params.depth_mode = DEPTH_MODE::NEURAL_PLUS;
-    init_params.depth_maximum_distance = 3.0f;
+    init_params.depth_maximum_distance = 4.0f;
 
-    if (zed1.open(init_params) != ERROR_CODE::SUCCESS ||
-        zed2.open(init_params) != ERROR_CODE::SUCCESS) {
-        cerr << "Failed to open ZED cameras." << endl;
-        return -1;
+    // Open all cameras
+    for (int i = 0; i < n_cameras; i++) {
+        if (zeds[i].open(init_params) != ERROR_CODE::SUCCESS) {
+            cerr << "Failed to open ZED camera " << i << endl;
+            return -1;
+        }
     }
-    cout << "ZED cameras opened!" << endl;
+    cout << "All ZED cameras opened!" << endl;
 
-    Mat pc1_mat, pc2_mat;
     RuntimeParameters runtime_params;
-
     auto cloud_combined = make_shared<geometry::PointCloud>();
     shared_ptr<geometry::PointCloud> latest_cloud;
     mutex cloud_mutex;
 
     visualization::Visualizer vis;
     vis.CreateVisualizerWindow("Merged Point Clouds", 1280, 720);
-    auto ref_frame = open3d::geometry::TriangleMesh::CreateCoordinateFrame(0.5);
-    vis.AddGeometry(ref_frame);
+    vis.AddGeometry(open3d::geometry::TriangleMesh::CreateCoordinateFrame(0.5));
     vis.AddGeometry(cloud_combined);
 
-    // Thread for grabbing and processing point clouds
     bool save_pc = true;
     bool first_frame = true;
+
     thread grab_thread([&]() {
         while (true) {
-            if (zed1.grab(runtime_params) == ERROR_CODE::SUCCESS &&
-                zed2.grab(runtime_params) == ERROR_CODE::SUCCESS) {
-
-                zed1.retrieveMeasure(pc1_mat, MEASURE::XYZRGBA);
-                zed2.retrieveMeasure(pc2_mat, MEASURE::XYZRGBA);
-
-                auto pc1 = ZEDToOpen3D(pc1_mat);
-                auto pc2 = ZEDToOpen3D(pc2_mat);
-                pc2->Transform(T);
-
-                auto merged = make_shared<geometry::PointCloud>();
-                merged->points_ = pc1->points_;
-                merged->colors_ = pc1->colors_;
-                merged->points_.insert(merged->points_.end(),
-                                       pc2->points_.begin(), pc2->points_.end());
-                merged->colors_.insert(merged->colors_.end(),
-                                       pc2->colors_.begin(), pc2->colors_.end());
-
-                lock_guard<mutex> lock(cloud_mutex);
-                latest_cloud = merged;
-                if (save_pc && first_frame) {
-                    string filename = "merged_point_cloud.ply";
-                    io::WritePointCloud(filename, *merged);
-                    filename = "pc1.ply";
-                    io::WritePointCloud(filename, *pc1);
-                    filename = "pc2.ply";
-                    io::WritePointCloud(filename, *pc2); 
-                    cout << "Merged point cloud saved to: " << filename << endl;
-                    first_frame = false;
-                }
+            bool all_grabbed = true;
+            for (auto &zed : zeds) {
+                if (zed.grab(runtime_params) != ERROR_CODE::SUCCESS)
+                    all_grabbed = false;
             }
+            if (!all_grabbed) continue;
+
+            vector<shared_ptr<geometry::PointCloud>> pcs(n_cameras);
+            for (int i = 0; i < n_cameras; i++) {
+                zeds[i].retrieveMeasure(pc_mats[i], MEASURE::XYZRGBA);
+                pcs[i] = ZEDToOpen3D(pc_mats[i]);
+                pcs[i]->Transform(Ts[i]);  // transform to reference frame
+            }
+
+            auto merged = make_shared<geometry::PointCloud>();
+            for (auto &pc : pcs) {
+                merged->points_.insert(merged->points_.end(),
+                                       pc->points_.begin(), pc->points_.end());
+                merged->colors_.insert(merged->colors_.end(),
+                                       pc->colors_.begin(), pc->colors_.end());
+            }
+
+            lock_guard<mutex> lock(cloud_mutex);
+            latest_cloud = merged;
+
+            if (save_pc && first_frame) {
+                io::WritePointCloud("merged_point_cloud.ply", *merged);
+                for (int i = 0; i < n_cameras; i++)
+                    io::WritePointCloud("pc" + to_string(i) + ".ply", *pcs[i]);
+                cout << "Merged point cloud saved!" << endl;
+                first_frame = false;
+            }
+
             this_thread::sleep_for(chrono::milliseconds(10));
         }
     });
 
-    // Main visualization loop
     while (true) {
         {
             lock_guard<mutex> lock(cloud_mutex);
@@ -164,7 +168,6 @@ int main(int argc, char **argv) {
                 cloud_combined->colors_ = latest_cloud->colors_;
             }
         }
-
         vis.UpdateGeometry(cloud_combined);
         vis.PollEvents();
         vis.UpdateRender();
@@ -172,8 +175,8 @@ int main(int argc, char **argv) {
     }
 
     grab_thread.join();
-    zed1.close();
-    zed2.close();
+    for (auto &zed : zeds)
+        zed.close();
     vis.DestroyVisualizerWindow();
     return 0;
 }
