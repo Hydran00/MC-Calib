@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
     init_params.coordinate_system = COORDINATE_SYSTEM::IMAGE;
     init_params.coordinate_units = UNIT::METER;
     init_params.depth_mode = DEPTH_MODE::NEURAL_PLUS;
-    init_params.depth_maximum_distance = 4.0f;
+    init_params.depth_maximum_distance = 2.4f;
 
     // Open all cameras
     for (int i = 0; i < n_cameras; i++) {

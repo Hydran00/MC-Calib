@@ -47,6 +47,20 @@ capture_lock = threading.Lock()
 CAPTURE_PER_STATION = 10
 
 # ---------------- UTILS -----------------
+def get_last_index(folder_name):
+    files = [f for f in os.listdir(folder_name) if f.startswith("image_") and f.endswith(".png")]
+    if not files:
+        return 1
+    # extract numbers
+    indices = []
+    for f in files:
+        try:
+            idx = int(f.replace("image_", "").replace(".png", ""))
+            indices.append(idx)
+        except ValueError:
+            continue
+    return max(indices) + 1 if indices else 1
+
 def create_camera_folders(nb_cameras):
     for i in range(nb_cameras):
         folder_name = f"Cam_{(i+1):03d}"
@@ -160,8 +174,8 @@ class AcquireGui(QWidget):
                 cv2.putText(frame, text, (50, 100), 
                             cv2.FONT_HERSHEY_SIMPLEX,   # font
                             2.0,                        # font scale (big & visible)
-                            (0, 255, 0),                # text color (green)
-                            4,                          # thickness
+                            (255, 0, 0),                # text color (green)
+                            5,                          # thickness
                             cv2.LINE_AA)                # anti-aliased
 
                 # resize to preview
@@ -200,7 +214,13 @@ def main():
         return 1
 
     capture_image = [0] * len(zeds)
-    image_counters = [1] * len(zeds)
+    # image_counters = [1] * len(zeds)
+    image_counters = []
+    for i in range(len(zeds)):
+        folder_name = f"Cam_{(i+1):03d}"
+        last_index = get_last_index(folder_name)
+        image_counters.append(last_index)
+        print(f"Camera {i+1} will start saving at index {last_index}")
     detection_ok = [False] * len(zeds)
 
     # acquisition threads (for saving)

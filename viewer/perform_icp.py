@@ -6,7 +6,7 @@ def preprocess_point_cloud(pcd, voxel_size):
 
     radius_normal = voxel_size * 2
     pcd_down.estimate_normals(
-        o3d.geometry.KDTreeSearchParamHybrid(radius=radius_normal, max_nn=30)
+        o3d.geometry.KDTreeSearchParamHybrid(radius=radius_normal, max_nn=40)
     )
 
     radius_feature = voxel_size * 5
@@ -27,14 +27,12 @@ def perform_icp(source, target, threshold=0.02):
     """
     # Apply Colored ICP with Tukey's robust kernel
     loss = o3d.pipelines.registration.TukeyLoss(k=0.1)
-    estimation = o3d.pipelines.registration.TransformationEstimationPointToPlane(
-                loss
-            )
+    estimation = o3d.pipelines.registration.TransformationEstimationForColoredICP()
     # result = o3d.pipelines.registration.registration_colored_icp(
-    result = o3d.pipelines.registration.registration_icp(
+    result = o3d.pipelines.registration.registration_colored_icp(
         source,
         target,
-        0.1,
+        threshold,
         np.eye(4),
         estimation,
     )
@@ -46,16 +44,17 @@ if __name__ == "__main__":
     # Load two point clouds
     pc0 = o3d.io.read_point_cloud("./build/pc0.ply")
     # statistical outlier removal
-    cl, ind = pc0.remove_statistical_outlier(nb_neighbors=20, std_ratio=2.0)
+    cl, ind = pc0.remove_statistical_outlier(nb_neighbors=30, std_ratio=2.0)
     pc0 = pc0.select_by_index(ind)
     pc1 = o3d.io.read_point_cloud("./build/pc1.ply")
     # statistical outlier removal
-    cl, ind = pc1.remove_statistical_outlier(nb_neighbors=20, std_ratio=2.0)
+    cl, ind = pc1.remove_statistical_outlier(nb_neighbors=30, std_ratio=2.0)
     pc1 = pc1.select_by_index(ind)
     pc2 = o3d.io.read_point_cloud("./build/pc2.ply")
     # statistical outlier removal
-    cl, ind = pc2.remove_statistical_outlier(nb_neighbors=20, std_ratio=2.0)
+    cl, ind = pc2.remove_statistical_outlier(nb_neighbors=30, std_ratio=2.0)
     pc2 = pc2.select_by_index(ind)
+    ref_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.5, origin=[0, 0, 0])
 
     vis = o3d.visualization.VisualizerWithEditing()
     vis.create_window(window_name="Filtered Point Clouds")
@@ -63,18 +62,29 @@ if __name__ == "__main__":
     tmp+= pc1
     tmp+= pc2
     vis.add_geometry(tmp)
+    vis.add_geometry(ref_frame)
     vis.run()
     vis.destroy_window()
     print("")
     print(vis.get_picked_points()) #[84, 119, 69]
+
+    # filter pavement
+    box = o3d.geometry.AxisAlignedBoundingBox(min_bound=(-np.inf, -np.inf, -np.inf), max_bound=(np.inf, 0.85, np.inf))
+    pc0 = pc0.crop(box)
+    pc1 = pc1.crop(box)
+    pc2 = pc2.crop(box)
+
+    o3d.visualization.draw_geometries([pc0, pc1, pc2, ref_frame], window_name="Filtered Point Clouds")
+
+
     # Preprocess point clouds
     voxel_size = 0.01  # Adjust voxel size as needed
     pc0_down, _ = preprocess_point_cloud(pc0, voxel_size)
     pc1_down, _ = preprocess_point_cloud(pc1, voxel_size)
     pc2_down, _ = preprocess_point_cloud(pc2, voxel_size)
     # Perform ICP
-    transformation1 = perform_icp(pc1_down, pc0_down)
-    transformation2 = perform_icp(pc2_down, pc0_down)
+    transformation1 = perform_icp(pc1_down, pc0_down, voxel_size * 2)
+    transformation2 = perform_icp(pc2_down, pc0_down, voxel_size * 2)
 
 
 
