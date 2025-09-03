@@ -81,3 +81,4 @@ logfile.log
 !libs/.gitignore
 record_dataset/Cam*
 ###################################
+*.onnx
