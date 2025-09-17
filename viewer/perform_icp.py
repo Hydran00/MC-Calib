@@ -69,7 +69,7 @@ if __name__ == "__main__":
     print(vis.get_picked_points()) #[84, 119, 69]
 
     # filter pavement
-    box = o3d.geometry.AxisAlignedBoundingBox(min_bound=(-np.inf, -np.inf, -np.inf), max_bound=(np.inf, 0.85, np.inf))
+    box = o3d.geometry.AxisAlignedBoundingBox(min_bound=(-np.inf, -np.inf, -np.inf), max_bound=(np.inf, 1.0, np.inf))
     pc0 = pc0.crop(box)
     pc1 = pc1.crop(box)
     pc2 = pc2.crop(box)
@@ -95,4 +95,6 @@ if __name__ == "__main__":
     pc0 += pc1
     pc0 += pc2
     o3d.visualization.draw_geometries([pc0], window_name="Point Clouds")
-    o3d.io.write_point_cloud("./build/transformed_source.ply", pc0, write_ascii=True)
+    path = "./build/icp_result.ply"
+    o3d.io.write_point_cloud(path, pc0, write_ascii=True)
+    print("Transformed point cloud saved to ", path)

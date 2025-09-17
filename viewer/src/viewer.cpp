@@ -63,7 +63,7 @@ shared_ptr<geometry::PointCloud> GrabAndProcessFrame(
     if (!best_mask.empty()) {
         cv::Mat eroded_mask;
         cv::erode(best_mask, eroded_mask,
-                  cv::getStructuringElement(cv::MORPH_RECT, cv::Size(10, 10)));
+                  cv::getStructuringElement(cv::MORPH_RECT, cv::Size(15, 15)));
         best_mask = eroded_mask;
 
         auto pc = ZEDToOpen3D(pc_mat, cvImage, best_bbox, best_mask);
@@ -79,6 +79,7 @@ shared_ptr<geometry::PointCloud> GrabAndProcessFrame(
 int main(int argc, char **argv) {
     string calib_file = (argc > 1) ? argv[1] : "calibration.yaml";
     int n_cameras = (argc > 2) ? stoi(argv[2]) : 2;
+    cout << "Opening " << n_cameras << " ZED cameras..." << endl;
 
     cout << "Loading calibration from: " << calib_file << endl;
     auto Ts = LoadCalibrationYAML(calib_file, n_cameras);

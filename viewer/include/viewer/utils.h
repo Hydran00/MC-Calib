@@ -39,7 +39,14 @@ vector<Eigen::Matrix4d> LoadCalibrationYAML(const string &filename, int n) {
 // Convert ZED XYZRGBA to Open3D PointCloud
 void SavePointClouds(const vector<shared_ptr<geometry::PointCloud>> &pcs,
                      const shared_ptr<geometry::PointCloud> &merged) {
-  io::WritePointCloud("merged_point_cloud.ply", *merged);
+  // filter outliers
+  //    cl, ind = pc0.remove_statistical_outlier(nb_neighbors=30, std_ratio=2.0)
+  // pc0 = pc0.select_by_index(ind)
+
+  auto [cl, ind] =
+      merged->RemoveStatisticalOutliers(60, 2.0);
+  auto filtered = merged->SelectByIndex(ind);
+  io::WritePointCloud("merged_point_cloud.ply", *filtered);
   for (int i = 0; i < pcs.size(); i++)
     io::WritePointCloud("pc" + to_string(i) + ".ply", *pcs[i]);
   cout << "Saved first frame clouds!" << endl;

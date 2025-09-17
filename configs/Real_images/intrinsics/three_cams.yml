@@ -1,39 +1,39 @@
 %YAML:1.0
 ---
 nb_camera: 3 
-camera_0: # all the calibration parameters (intrinsic/extrinsic) for the camera 0
+camera_0: # camera 0 SN36560304 
    camera_matrix: !!opencv-matrix # 3x3 intrinsic matrix
       rows: 3
       cols: 3
       dt: d
-      data: [ 1062.48, 0., 1105.71, 0., 1062.49, 608.373, 0., 0., 1. ]
+      data:   [1039.96044921875, 0, 1115.7509765625, 0, 1039.96044921875, 607.827392578125, 0, 0, 1]
    distortion_vector: !!opencv-matrix # 1x5 distortion vector (Brown model here)
       rows: 1
       cols: 5
       dt: d
-      data: [ -0.0519472, 0.023429, -0.000345647, -0.000301131, -0.00914485 ]
+      data: [0.0, 0.0, 0.0, 0.0, 0.0]
    distortion_type: 0 # type of distortion model (0: perspective, 1: fisheye)
-camera_1: # all the calibration parameters (intrinsic/extrinsic) for the camera 1
+camera_1: # camera 1 SN30227761
    camera_matrix: !!opencv-matrix # 3x3 intrinsic matrix for camera 1
       rows: 3
       cols: 3
       dt: d
-      data: [ 1065.28, 0., 1099.76, 0., 1065.19, 621.531, 0., 0., 1. ]
+      data: [1057.2872314453125, 0, 1118.5224609375, 0, 1057.2872314453125, 621.2196655273438, 0, 0, 1]
    distortion_vector: !!opencv-matrix # 1x4 distortion vector (fisheye model)
       rows: 1
       cols: 5
       dt: d
-      data: [ -0.0535795, 0.0263845, -0.000309893, -8.31882e-05, -0.0108287 ]
+      data: [0.0, 0.0, 0.0, 0.0, 0.0]
    distortion_type: 0 # type of distortion model (0: perspective, 1: fisheye)
-camera_2: # all the calibration parameters (intrinsic/extrinsic) for the camera 1
+camera_2: # camera 1 SN32914161
    camera_matrix: !!opencv-matrix # 3x3 intrinsic matrix for camera 1
       rows: 3
       cols: 3
       dt: d
-      data: [ 1067.12, 0., 1100.51, 0., 1067.11, 609.207, 0., 0., 1. ]
+      data: [1046.363037109375, 0, 1106.0255126953125, 0, 1046.363037109375, 619.1349487304688, 0, 0, 1]
    distortion_vector: !!opencv-matrix # 1x4 distortion vector (fisheye model)
       rows: 1
       cols: 5
       dt: d
-      data: [ -0.0539605, 0.0245526, 0.000293473, 0.000295887, -0.00975217 ]
+      data: [0.0, 0.0, 0.0, 0.0, 0.0]
    distortion_type: 0 # type of distortion model (0: perspective, 1: fisheye)

@@ -3,40 +3,19 @@ import threading
 import time
 import os
 import cv2
+import shutil
 import pyzed.sl as sl
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QLabel, QHBoxLayout
 from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QImage, QPixmap
 
+
+
+
 # --- ArUco/ChArUco setup ---\
 aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 board = cv2.aruco.CharucoBoard((5, 7), 0.04, 0.03, aruco_dict)
 aruco_params = cv2.aruco.DetectorParameters()
-# --- Adaptive Thresholding ---
-# aruco_params.adaptiveThreshWinSizeMin = 3       # smaller window to catch small markers
-# aruco_params.adaptiveThreshWinSizeMax = 23      # max window size
-# aruco_params.adaptiveThreshWinSizeStep = 2
-# aruco_params.adaptiveThreshConstant = 7         # adjust depending on lighting
-
-# # --- Marker size / filtering tweaks ---
-# aruco_params.minMarkerPerimeterRate = 0.03      # lower so smaller markers are detected
-# aruco_params.maxMarkerPerimeterRate = 4.0       # keep default
-# aruco_params.polygonalApproxAccuracyRate = 0.03 # tighter contour approximation
-
-# # --- Corner refinement ---
-# aruco_params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
-# aruco_params.cornerRefinementWinSize = 5        # small enough for small markers
-# aruco_params.cornerRefinementMaxIterations = 30
-# aruco_params.cornerRefinementMinAccuracy = 0.01
-
-# # --- Detection filtering ---
-# aruco_params.minDistanceToBorder = 3             # reduce if markers are near edge
-# aruco_params.minCornerDistanceRate = 0.05        # default ~0.05, ok
-
-# # --- Optional: improve detection under blur / noise ---
-# # aruco_params.doCornerRefinement = True
-# aruco_params.errorCorrectionRate = 0.7           # relax strictness a bit
-
 
 # Global state
 exit_app = False
@@ -47,6 +26,19 @@ capture_lock = threading.Lock()
 CAPTURE_PER_STATION = 10
 
 # ---------------- UTILS -----------------
+def get_zed_calib_matrix(zed):
+    """ Get the camera matrix from the ZED calibration parameters """
+    calib_params = zed.get_camera_information().camera_configuration.calibration_parameters
+    fx = calib_params.left_cam.fx
+    fy = calib_params.left_cam.fy
+    cx = calib_params.left_cam.cx
+    cy = calib_params.left_cam.cy
+    camera_matrix = f"[{fx}, 0, {cx}, 0, {fy}, {cy}, 0, 0, 1]"
+    # retrieve distortion parameters if needed
+    distortion = calib_params.left_cam.disto[0:5]
+    distortion = f"[{distortion[0]}, {distortion[1]}, {distortion[2]}, {distortion[3]}, {distortion[4]}]"
+    return camera_matrix, distortion
+
 def get_last_index(folder_name):
     files = [f for f in os.listdir(folder_name) if f.startswith("image_") and f.endswith(".png")]
     if not files:
@@ -66,6 +58,14 @@ def create_camera_folders(nb_cameras):
         folder_name = f"Cam_{(i+1):03d}"
         if not os.path.exists(folder_name):
             os.makedirs(folder_name)
+        else:
+            # remove all the content
+            files = [f for f in os.listdir(folder_name) if f.startswith("image_") and f.endswith(".png")]
+            if files != []:
+                input(f"Folder {folder_name} already exists, press Enter to clear its content")
+                for f in files:
+                    os.remove(os.path.join(folder_name, f))
+                print(f"Folder {folder_name} already exists, cleared its content")
 
 def save_image(image, camera_index):
     global image_counters
@@ -101,6 +101,10 @@ def open_camera(zed, sn, camera_fps=5):
     open_err = zed.open(init_params)
     if open_err == sl.ERROR_CODE.SUCCESS:
         print(f"{zed.get_camera_information().camera_model}_SN{sn} Opened")
+        cam_matrix, distortion = get_zed_calib_matrix(zed)
+        print("Camera matrix: \n", cam_matrix)
+        print("Distortion: \n", distortion)
+        print("-----------------------")
         zed.set_camera_settings(sl.VIDEO_SETTINGS.AEC_AGC, 0)
         zed.set_camera_settings(sl.VIDEO_SETTINGS.EXPOSURE, 15)
         return True
@@ -222,7 +226,7 @@ def main():
         image_counters.append(last_index)
         print(f"Camera {i+1} will start saving at index {last_index}")
     detection_ok = [False] * len(zeds)
-
+    
     # acquisition threads (for saving)
     threads = []
     for i, zed in enumerate(zeds):
